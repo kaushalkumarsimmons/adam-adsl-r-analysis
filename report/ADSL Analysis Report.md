@@ -1,0 +1,502 @@
+# ADSL Analysis Report
+
+## ADaM Subject-Level Analysis Dataset: Descriptive, Statistical, and Bayesian Analysis
+
+### 1. Project Overview
+
+This project demonstrates an end-to-end analysis of a simulated ADaM Subject-Level Analysis Dataset (ADSL) using R.
+
+The analysis focuses on:
+
+- dataset structure and quality control;
+- subject-level demographics;
+- treatment-group characteristics;
+- baseline variables;
+- treatment exposure;
+- descriptive statistics and visualization;
+- statistical comparisons between treatment groups;
+- correlation analysis;
+- multivariable linear regression; and
+- Bayesian regression using `brms`.
+
+The primary outcome investigated in the statistical analyses is treatment duration (`TRTDURD`).
+
+The purpose of the project is educational and portfolio-oriented. The dataset is simulated and should not be interpreted as representing an actual clinical trial.
+
+---
+
+# 2. Dataset
+
+The analysis uses a simulated ADaM ADSL dataset containing:
+
+- **100 subjects**
+- **38 variables**
+- **5 treatment arms**
+
+The dataset contains subject identifiers, demographic characteristics, treatment information, analysis population flags, treatment dates and duration, dose/exposure variables, baseline measurements, and death-related variables.
+
+Important variables used in this analysis include:
+
+| Variable | Description |
+|---|---|
+| `USUBJID` | Unique subject identifier |
+| `AGE` | Age |
+| `SEX` | Sex |
+| `RACE` | Race |
+| `TRT01P` | Planned treatment |
+| `TRT01A` | Actual treatment |
+| `SAFFL` | Safety population flag |
+| `ITTFL` | Intent-to-treat population flag |
+| `PPROTFL` | Per-protocol population flag |
+| `HEIGHTBL` | Baseline height |
+| `WEIGHTBL` | Baseline weight |
+| `BMIBL` | Baseline BMI |
+| `TRTDURD` | Treatment duration in days |
+| `CUMDOSE` | Cumulative dose |
+| `AVGDD` | Average daily dose |
+| `DTHFL` | Death flag |
+| `DTHDT` | Death date |
+
+---
+
+# 3. Software and Packages
+
+The analysis was performed using R.
+
+Main packages included:
+
+- `tidyverse`
+- `janitor`
+- `skimr`
+- `broom`
+- `brms`
+
+`tidyverse` was used for data manipulation and visualization, `janitor` and `skimr` for data inspection and quality assessment, `broom` for converting statistical model outputs into tidy data frames, and `brms` for Bayesian regression modeling.
+
+---
+
+# 4. Data Import and Initial Assessment
+
+The ADSL dataset was imported into R and inspected using `dim()`, `names()`, and `glimpse()`.
+
+The dataset contained **100 observations and 38 variables**.
+
+The analysis confirmed that the dataset was structured at the subject level, with one record per subject.
+
+A uniqueness check was performed using `USUBJID`.
+
+```r
+n_subjects <- n_distinct(adsl$USUBJID)
+n_records <- nrow(adsl)
+```
+
+The analysis confirmed 100 unique subjects among 100 records.
+
+A duplicate-subject check was also performed.
+
+---
+
+# 5. Data Quality Control
+
+Several basic QC checks were implemented.
+
+These included:
+
+- subject-level uniqueness;
+- analysis population flags;
+- missing values;
+- treatment consistency; and
+- variable metadata.
+
+Examples of the implemented checks included:
+
+```r
+stopifnot(nrow(adsl) == 100)
+stopifnot(n_distinct(adsl$USUBJID) == nrow(adsl))
+stopifnot(all(adsl$SAFFL %in% c("Y", "N")))
+stopifnot(all(adsl$ITTFL %in% c("Y", "N")))
+```
+
+Treatment consistency was evaluated by comparing planned and actual treatment assignments.
+
+```r
+treatment_qc <- adsl %>%
+  filter(ARMCD != ACTARMCD) %>%
+  select(USUBJID, ARMCD, ACTARMCD, TRT01P, TRT01A)
+```
+
+These checks form an important part of the analysis because statistical modeling should be performed only after basic dataset integrity has been assessed.
+
+---
+
+# 6. Baseline and Demographic Analysis
+
+Descriptive statistics were generated for age and categorical demographic variables.
+
+Age was summarized by treatment arm using:
+
+- sample size;
+- mean;
+- standard deviation;
+- median;
+- first quartile;
+- third quartile;
+- minimum; and
+- maximum.
+
+Sex and race distributions were summarized using counts and percentages.
+
+Visualization included boxplots of age and baseline BMI by treatment arm and bar charts for sex distribution.
+
+---
+
+# 7. Comparison of Age Across Treatment Arms
+
+A one-way ANOVA was performed to investigate whether mean age differed between the five treatment arms.
+
+The results were:
+
+```text
+F(4, 95) = 0.645
+p = 0.632
+```
+
+There was no statistically significant evidence of differences in mean age between treatment groups.
+
+A non-parametric Kruskal-Wallis test was also performed:
+
+```text
+χ²(4) = 2.349
+p = 0.672
+```
+
+The Kruskal-Wallis analysis provided the same overall conclusion.
+
+These results suggest that there was no evidence of substantial age differences across treatment groups in this simulated dataset.
+
+---
+
+# 8. Sex Distribution Across Treatment Arms
+
+The association between treatment arm and sex was evaluated using Pearson's chi-square test.
+
+The result was:
+
+```text
+χ²(4) = 1.369
+p = 0.850
+```
+
+No statistically significant association between treatment arm and sex was observed.
+
+Fisher's exact test was also performed:
+
+```text
+p = 0.900
+```
+
+This provided the same overall conclusion.
+
+Therefore, the analysis found no evidence of an association between treatment assignment and sex in this simulated dataset.
+
+---
+
+# 9. Treatment Duration by Treatment Arm
+
+Treatment duration (`TRTDURD`) was selected as the primary outcome for the statistical modeling component.
+
+Treatment duration was compared across the five treatment arms using one-way ANOVA.
+
+The results were:
+
+```text
+F(4, 95) = 1.194
+p = 0.319
+```
+
+There was no statistically significant evidence that mean treatment duration differed between the treatment groups.
+
+A Kruskal-Wallis test was also performed:
+
+```text
+χ²(4) = 4.651
+p = 0.325
+```
+
+The non-parametric analysis produced a consistent conclusion.
+
+Overall, neither the ANOVA nor Kruskal-Wallis analysis provided strong evidence of differences in treatment duration between treatment arms.
+
+---
+
+# 10. Correlation Between Age and Treatment Duration
+
+Pearson correlation was used to investigate the linear relationship between age and treatment duration.
+
+The estimated correlation was:
+
+```text
+r = 0.0259
+```
+
+This value is very close to zero, indicating essentially no linear correlation between age and treatment duration in this dataset.
+
+This observation was also consistent with the subsequent regression analysis.
+
+---
+
+# 11. Multivariable Linear Regression
+
+A multiple linear regression model was fitted using treatment duration as the dependent variable:
+
+```r
+lm_model <- lm(
+  TRTDURD ~ AGE + SEX + BMIBL + TRT01P,
+  data = adsl
+)
+```
+
+The model included:
+
+- age;
+- sex;
+- baseline BMI; and
+- planned treatment.
+
+### Regression Results
+
+| Predictor | Estimate | Standard Error | p-value |
+|---|---:|---:|---:|
+| AGE | 0.130 | 0.566 | 0.818 |
+| SEXM | -4.595 | 21.115 | 0.828 |
+| BMIBL | 0.654 | 2.154 | 0.762 |
+| Treatment 2 | 3.208 | 32.997 | 0.923 |
+| Treatment 3 | -35.250 | 33.694 | 0.298 |
+| Treatment 4 | 16.202 | 32.964 | 0.624 |
+| Treatment 5 | 29.264 | 33.315 | 0.382 |
+
+The overall model results were:
+
+```text
+R² = 0.0498
+Adjusted R² = -0.0224
+
+F(7, 92) = 0.690
+p = 0.681
+```
+
+The model therefore explained approximately **5% of the observed variability in treatment duration**.
+
+The overall F-test did not provide evidence that the predictors collectively explained a substantial amount of variation in treatment duration.
+
+The residual standard error was approximately **104 days**, indicating considerable unexplained variability.
+
+---
+
+# 12. Interpretation of Treatment Effects
+
+Treatment 1 was used as the reference treatment.
+
+Treatment 3 had the largest negative estimated coefficient:
+
+```text
+Estimate = -35.25 days
+p = 0.298
+```
+
+This suggests an estimated treatment duration approximately 35 days shorter than the reference treatment after adjustment for age, sex, and baseline BMI.
+
+However, the p-value was not statistically significant.
+
+Therefore, the result should not be interpreted as evidence that Treatment 3 definitively reduces treatment duration.
+
+A more appropriate interpretation is that the simulated dataset provides insufficient evidence for a treatment-duration difference between Treatment 3 and the reference treatment.
+
+---
+
+# 13. Bayesian Regression
+
+A Bayesian Gaussian regression model was fitted using `brms`:
+
+```r
+bayes_model <- brm(
+  TRTDURD ~ AGE + BMIBL + TRT01P,
+  data = adsl,
+  family = gaussian(),
+  chains = 4,
+  iter = 2000,
+  warmup = 1000,
+  seed = 1234
+)
+```
+
+The model generated:
+
+- 4 MCMC chains;
+- 2,000 iterations per chain;
+- 1,000 warmup iterations per chain; and
+- 4,000 post-warmup posterior draws.
+
+---
+
+# 14. Bayesian Regression Results
+
+The posterior estimates were:
+
+| Parameter | Posterior Mean | 95% Credible Interval |
+|---|---:|---:|
+| AGE | 0.133 | -0.947 to 1.254 |
+| BMIBL | 0.735 | -3.480 to 4.957 |
+| Treatment 2 | 3.596 | -60.429 to 67.149 |
+| Treatment 3 | -34.269 | -101.635 to 33.195 |
+| Treatment 4 | 16.485 | -49.232 to 80.993 |
+| Treatment 5 | 29.507 | -37.590 to 94.773 |
+| sigma | 104.066 | 90.375 to 119.905 |
+
+The Bayesian model produced estimates very similar to those obtained from the frequentist regression.
+
+For example, Treatment 3 had:
+
+```text
+Frequentist estimate = -35.25 days
+Bayesian posterior mean = -34.27 days
+```
+
+The corresponding uncertainty intervals were also broadly consistent.
+
+The posterior interval for Treatment 3 included zero, indicating substantial uncertainty regarding the direction and magnitude of the treatment difference.
+
+Overall, the Bayesian analysis did not provide strong evidence for associations between treatment duration and age, baseline BMI, or treatment arm.
+
+---
+
+# 15. Bayesian Model Diagnostics
+
+The model was estimated using the NUTS sampling algorithm.
+
+All regression coefficients and the residual standard deviation had:
+
+```text
+Rhat = 1.00
+```
+
+This indicates satisfactory convergence of the MCMC chains.
+
+Effective sample sizes were also high, with bulk and tail ESS values generally in the thousands.
+
+For example:
+
+- AGE: Bulk ESS ≈ 5,158
+- BMIBL: Bulk ESS ≈ 5,966
+- Treatment effects: Bulk ESS ≈ 2,700–2,900
+- sigma: Bulk ESS ≈ 5,024
+
+These diagnostics provide evidence that the posterior samples were adequately mixed and that the model achieved satisfactory computational convergence.
+
+Posterior predictive checks should additionally be used to assess how well the fitted model reproduces the observed treatment-duration distribution.
+
+---
+
+# 16. Frequentist and Bayesian Comparison
+
+An important feature of this analysis is the comparison between frequentist and Bayesian approaches.
+
+Both approaches produced highly similar estimates.
+
+For example:
+
+| Parameter | Frequentist Estimate | Bayesian Estimate |
+|---|---:|---:|
+| AGE | 0.130 | 0.133 |
+| BMIBL | 0.654 | 0.735 |
+| Treatment 2 | 3.208 | 3.596 |
+| Treatment 3 | -35.250 | -34.269 |
+| Treatment 4 | 16.202 | 16.485 |
+| Treatment 5 | 29.264 | 29.507 |
+
+This consistency increases confidence that the observed patterns are not dependent on whether a frequentist or Bayesian estimation framework is used.
+
+The Bayesian framework additionally provides posterior distributions and credible intervals, allowing uncertainty to be expressed directly in probabilistic terms.
+
+---
+
+# 17. Overall Statistical Findings
+
+Across the analyses performed, there was no strong statistical evidence of differences in treatment duration between the five treatment arms.
+
+Similarly:
+
+- age did not differ significantly across treatment groups;
+- sex was not associated with treatment group;
+- age showed essentially no linear correlation with treatment duration;
+- age and baseline BMI showed no strong evidence of association with treatment duration;
+- the multivariable regression explained only approximately 5% of the variability in treatment duration; and
+- Bayesian credible intervals for treatment effects included zero.
+
+Treatment 3 consistently showed the largest negative estimated treatment-duration difference, but the associated uncertainty was substantial.
+
+These findings should be interpreted as characteristics of the simulated dataset rather than evidence about an actual clinical treatment.
+
+---
+
+# 18. Limitations
+
+Several limitations should be considered.
+
+### Simulated data
+
+The dataset is simulated and therefore does not represent an actual clinical trial population.
+
+### Small sample size
+
+The analysis includes only 100 subjects distributed across five treatment arms. This limits the precision with which treatment effects can be estimated.
+
+### High variability
+
+Treatment duration showed substantial residual variability, with a residual standard deviation of approximately 104 days.
+
+### Limited covariate information
+
+The current analysis uses a relatively small number of demographic and baseline variables. Additional clinically relevant covariates could potentially explain more variation.
+
+### Gaussian outcome assumption
+
+The Bayesian model currently assumes a Gaussian distribution for treatment duration. The distribution of `TRTDURD` should be assessed using histograms, Q-Q plots, and posterior predictive checks before treating this model as an appropriate final model.
+
+### Educational analysis
+
+The statistical analyses are intended for learning and portfolio development rather than regulatory or clinical decision-making.
+
+---
+
+# 19. Reproducibility
+
+A random seed was specified for the Bayesian analysis:
+
+```r
+seed = 1234
+```
+
+This allows the Bayesian sampling procedure to be reproduced under the same software environment and model specification.
+
+The complete R workflow is organized into separate scripts covering:
+
+1. data import and QC;
+2. metadata;
+3. demographics;
+4. visualization;
+5. statistical testing;
+6. regression; and
+7. Bayesian modeling.
+
+---
+
+# 20. Conclusion
+
+This project demonstrates a complete analytical workflow for a simulated ADaM ADSL dataset, progressing from dataset inspection and quality control to descriptive analysis, statistical testing, regression modeling, and Bayesian inference.
+
+The analysis found no strong evidence of treatment-group differences in treatment duration. Frequentist and Bayesian regression produced highly consistent parameter estimates, while Bayesian convergence diagnostics indicated satisfactory MCMC performance.
+
+The project demonstrates practical experience with R-based clinical data analysis and provides a foundation for further work involving ADaM dataset construction with `admiral`, clinical trial tables and figures, and Bayesian oncology trial methodology.
+
+Future development will extend this project from analysis of an existing ADSL dataset toward a more complete CDISC workflow involving SDTM-to-ADaM derivation, analysis-ready datasets, and clinical trial tables, listings, and figures.
